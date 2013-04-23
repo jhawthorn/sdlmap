@@ -18,34 +18,6 @@ void die(const char* format, ...){
 	exit(-1);
 }
 
-void runloop(){
-	bool mousedown = false;
-	for(;;){
-		SDL_Event event;
-		SDL_WaitEvent(&event);
-		switch (event.type) {
-			case SDL_MOUSEBUTTONUP:
-				mousedown = false;
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-				mousedown = true;
-				break;
-			case SDL_MOUSEMOTION:
-				if(mousedown){
-					printf("mouse motion: %i %i\n", event.motion.yrel, event.motion.xrel);
-				}
-				break;
-			case SDL_KEYDOWN:
-				if(event.key.keysym.sym == SDLK_ESCAPE)
-					exit(0);
-				printf("The %s key was pressed!\n", SDL_GetKeyName(event.key.keysym.sym));
-				break;
-			case SDL_QUIT:
-				exit(0);
-		}
-	}
-}
-
 #define TILESIZE 256
 
 struct Coordinate{
@@ -115,6 +87,7 @@ class TileCollection{
 	void create_tiles();
 	void load_some(int count);
 	void render(int offsetx, int offsety);
+	bool bounded(Tile &t);
 };
 
 class MapView{
@@ -130,6 +103,20 @@ class MapView{
 			centerpt <<= zoom;
 			offsetx = centerpt.x * TILESIZE - surface->w / 2;
 			offsety = centerpt.y * TILESIZE - surface->h / 2;
+			update_bounds();
+		}
+		void zoom_in(){
+			zoom++;
+			offsetx = offsetx * 2 + surface->w / 2;
+			offsety = offsety * 2 + surface->h / 2;
+		}
+		void zoom_out(){
+			zoom--;
+			offsetx = (offsetx - surface->w / 2) / 2;
+			offsety = (offsety - surface->h / 2) / 2;
+		}
+		void update_bounds(){
+			tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
 		}
 		void render();
 };
@@ -167,7 +154,7 @@ class Tile{
 			SDL_Rect dest = {x * TILESIZE - offsetx, y * TILESIZE - offsety, TILESIZE, TILESIZE};
 			SDL_Surface *screen = SDL_GetVideoSurface();
 			if(surface){
-				printf("render: (%i, %i) => (%i, %i)\n", x, y, dest.x, dest.y);
+				printf("render: (%i, %i, %i) => (%i, %i)\n", x, y, zoom, dest.x, dest.y);
 				SDL_BlitSurface(surface, NULL, screen, &dest);
 			}else{
 				SDL_FillRect(screen, &dest, SDL_MapRGB(screen->format, 255, 255, 255));
@@ -197,23 +184,76 @@ void TileCollection::create_tiles(){
 	}
 };
 
+bool TileCollection::bounded(Tile &t){
+	return t.zoom == zoom && t.x >= minx && t.x <= maxx && t.y >= miny && t.y <= maxy;
+}
 void TileCollection::load_some(int count){
 	for(std::list<Tile *>::iterator it = tiles.begin(); count > 0 && it != tiles.end(); ++it){
-		(*it)->load();
+		Tile *t = *it;
+		if(!bounded(*t))
+			continue;
+		if(t->loaded())
+			continue;
+		t->load();
 		count--;
 	}
 }
 
 void TileCollection::render(int offsetx, int offsety){
 	for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
-		(*it)->render(offsetx, offsety);
+		if(bounded(**it))
+			(*it)->render(offsetx, offsety);
 	}
+	SDL_Flip(SDL_GetVideoSurface());
 }
 
 void MapView::render(){
-	tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
-	tiles.load_some(2);
 	tiles.render(offsetx, offsety);
+}
+
+void runloop(MapView &view){
+	bool mousedown = false;
+	for(;;){
+		SDL_Event event;
+		while(SDL_PollEvent(&event)){
+			switch (event.type) {
+				case SDL_MOUSEBUTTONUP:
+					mousedown = false;
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					mousedown = true;
+					break;
+				case SDL_MOUSEMOTION:
+					if(mousedown){
+						view.offsetx -= event.motion.xrel;
+						view.offsety -= event.motion.yrel;
+					}
+					break;
+				case SDL_KEYDOWN:
+					switch(event.key.keysym.sym){
+						case SDLK_ESCAPE:
+							exit(0);
+							break;
+						case SDLK_PLUS:
+						case SDLK_EQUALS:
+							view.zoom_in();
+							break;
+						case SDLK_MINUS:
+							view.zoom_out();
+							break;
+						default:
+							printf("The %s key was pressed!\n", SDL_GetKeyName(event.key.keysym.sym));
+							break;
+					}
+					break;
+				case SDL_QUIT:
+					exit(0);
+			}
+		}
+		view.update_bounds();
+		view.tiles.load_some(1);
+		view.render();
+	}
 }
 
 int main(int argc, char *argv[]){
@@ -224,9 +264,8 @@ int main(int argc, char *argv[]){
 	Coordinate center = {48.4284, -123.3656};
 	int zoom = 14;
 	MapView view(center, zoom);
-	view.render();
 
-	runloop();
+	runloop(view);
 	return 0;
 }
 
