@@ -43,31 +43,29 @@ struct MemoryStruct {
 	public:
 	MemoryStruct(){
 		size = 0;
-		memory = (char *)malloc(1);
+		memory = NULL;
 	}
 	~MemoryStruct(){
 		free(memory);
 	}
+	int append(void *contents, int len){
+		memory = (char *)realloc(memory, size + len);
+		if(memory == NULL) {
+			/* out of memory! */
+			fprintf(stderr, "not enough memory (realloc returned NULL)\n");
+			exit(-1);
+		}
+
+		memcpy(&memory[size], contents, len);
+		size += len;
+		return len;
+	}
+	static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp){
+		struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+		return mem->append(contents, size * nmemb);
+	}
 };
 
-
-static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-	size_t realsize = size * nmemb;
-	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-
-	mem->memory = (char *)realloc(mem->memory, mem->size + realsize + 1);
-	if(mem->memory == NULL) {
-		/* out of memory! */
-		printf("not enough memory (realloc returned NULL)\n");
-		return 0;
-	}
-
-	memcpy(&(mem->memory[mem->size]), contents, realsize);
-	mem->size += realsize;
-	mem->memory[mem->size] = 0;
-
-	return realsize;
-}
 
 class Tile;
 class MapView;
@@ -146,7 +144,7 @@ class Tile{
 				snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
 				curl_easy_setopt(curl, CURLOPT_URL, url);
 				curl_easy_setopt(curl, CURLOPT_USERAGENT, "sdlmap/1.0");
-				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, MemoryStruct::write_callback);
 				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
 				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 				res = curl_easy_perform(curl);
@@ -183,7 +181,6 @@ void TileCollection::create_tiles(){
 				}
 			}
 			if(!found){
-				printf("creating: (%i,%i,%i)\n", x, y, zoom);
 				tiles.push_front(new Tile(x, y, zoom));
 			}
 		}
