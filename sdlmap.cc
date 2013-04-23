@@ -85,7 +85,7 @@ class TileCollection{
 		create_tiles();
 	}
 	void create_tiles();
-	void load_some(int count);
+	int load_some(int count);
 	void render(int offsetx, int offsety);
 	bool bounded(Tile &t);
 };
@@ -187,16 +187,18 @@ void TileCollection::create_tiles(){
 bool TileCollection::bounded(Tile &t){
 	return t.zoom == zoom && t.x >= minx && t.x <= maxx && t.y >= miny && t.y <= maxy;
 }
-void TileCollection::load_some(int count){
-	for(std::list<Tile *>::iterator it = tiles.begin(); count > 0 && it != tiles.end(); ++it){
+int TileCollection::load_some(int count){
+	int loaded = 0;
+	for(std::list<Tile *>::iterator it = tiles.begin(); loaded < count && it != tiles.end(); ++it){
 		Tile *t = *it;
 		if(!bounded(*t))
 			continue;
 		if(t->loaded())
 			continue;
 		t->load();
-		count--;
+		loaded++;
 	}
+	return loaded;
 }
 
 void TileCollection::render(int offsetx, int offsety){
@@ -213,6 +215,7 @@ void MapView::render(){
 
 void runloop(MapView &view){
 	bool mousedown = false;
+	bool dirty = true;
 	for(;;){
 		SDL_Event event;
 		while(SDL_PollEvent(&event)){
@@ -227,6 +230,7 @@ void runloop(MapView &view){
 					if(mousedown){
 						view.offsetx -= event.motion.xrel;
 						view.offsety -= event.motion.yrel;
+						dirty = true;
 					}
 					break;
 				case SDL_KEYDOWN:
@@ -237,9 +241,11 @@ void runloop(MapView &view){
 						case SDLK_PLUS:
 						case SDLK_EQUALS:
 							view.zoom_in();
+							dirty = true;
 							break;
 						case SDLK_MINUS:
 							view.zoom_out();
+							dirty = true;
 							break;
 						default:
 							printf("The %s key was pressed!\n", SDL_GetKeyName(event.key.keysym.sym));
@@ -250,9 +256,12 @@ void runloop(MapView &view){
 					exit(0);
 			}
 		}
-		view.update_bounds();
-		view.tiles.load_some(1);
-		view.render();
+		if(dirty){
+			view.update_bounds();
+			int loaded = view.tiles.load_some(1);
+			dirty = (loaded > 0);
+			view.render();
+		}
 	}
 }
 
