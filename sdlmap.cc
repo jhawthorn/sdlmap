@@ -97,8 +97,8 @@ class MapView{
 		int zoom;
 		int offsetx, offsety;
 		SDL_Surface *surface;
-		MapView(Coordinate &center, int zoom): center(center), zoom(zoom){
-			surface = SDL_GetVideoSurface();
+		MapView(int width, int height, Coordinate &center, int zoom): center(center), zoom(zoom){
+			resize(width, height);
 			Point centerpt = center;
 			centerpt <<= zoom;
 			offsetx = centerpt.x * TILESIZE - surface->w / 2;
@@ -114,6 +114,12 @@ class MapView{
 			zoom--;
 			offsetx = (offsetx - surface->w / 2) / 2;
 			offsety = (offsety - surface->h / 2) / 2;
+		}
+		void resize(int width, int height){
+			printf("resize (%i, %i)\n", width, height);
+			surface = SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE);
+			if(!surface)
+				die("Unable to set video mode: %s\n", SDL_GetError());
 		}
 		void update_bounds(){
 			tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
@@ -218,7 +224,7 @@ void runloop(MapView &view){
 	bool dirty = true;
 	for(;;){
 		SDL_Event event;
-		while(SDL_PollEvent(&event)){
+		while(dirty ? SDL_PollEvent(&event) : SDL_WaitEvent(&event)){
 			switch (event.type) {
 				case SDL_MOUSEBUTTONUP:
 					mousedown = false;
@@ -252,6 +258,10 @@ void runloop(MapView &view){
 							break;
 					}
 					break;
+				case SDL_VIDEORESIZE:
+					view.resize(event.resize.w, event.resize.h);
+					dirty = true;
+					break;
 				case SDL_QUIT:
 					exit(0);
 			}
@@ -268,11 +278,9 @@ void runloop(MapView &view){
 int main(int argc, char *argv[]){
 	if(SDL_Init(SDL_INIT_VIDEO))
 		die("SDL_Init failed: %s", SDL_GetError());
-	if(!SDL_SetVideoMode(800, 600, 0, SDL_SWSURFACE))
-		die("Unable to set video mode: %s\n", SDL_GetError());
 	Coordinate center = {48.4284, -123.3656};
 	int zoom = 14;
-	MapView view(center, zoom);
+	MapView view(800, 600, center, zoom);
 
 	runloop(view);
 	return 0;
