@@ -221,7 +221,7 @@ void runloop(MapView &view){
 	bool dirty = true;
 	for(;;){
 		SDL_Event event;
-		while(dirty ? SDL_PollEvent(&event) : SDL_WaitEvent(&event)){
+		while((dirty ? SDL_PollEvent : SDL_WaitEvent)(&event)){
 			switch (event.type) {
 				case SDL_MOUSEBUTTONUP:
 					mousedown = false;
