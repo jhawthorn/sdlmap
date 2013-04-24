@@ -142,6 +142,7 @@ class Tile{
 				char url[4096];
 				//snprintf(url, sizeof url, "http://a.tile.openstreetmap.org/%i/%i/%i.png", zoom, x, y);
 				snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
+				//snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
 				curl_easy_setopt(curl, CURLOPT_URL, url);
 				curl_easy_setopt(curl, CURLOPT_USERAGENT, "sdlmap/1.0");
 				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, MemoryStruct::write_callback);
