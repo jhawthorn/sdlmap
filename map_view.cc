@@ -10,14 +10,18 @@ void MapView::render(){
 }
 
 void MapView::zoom_in(){
-	zoom++;
-	offsetx = offsetx * 2 + surface->w / 2;
-	offsety = offsety * 2 + surface->h / 2;
+	if(zoom < 22){
+		zoom++;
+		offsetx = offsetx * 2 + surface->w / 2;
+		offsety = offsety * 2 + surface->h / 2;
+	}
 }
 void MapView::zoom_out(){
-	zoom--;
-	offsetx = (offsetx - surface->w / 2) / 2;
-	offsety = (offsety - surface->h / 2) / 2;
+	if(zoom > 3){
+		zoom--;
+		offsetx = (offsetx - surface->w / 2) / 2;
+		offsety = (offsety - surface->h / 2) / 2;
+	}
 }
 void MapView::resize(int width, int height){
 	//printf("resize(%i, %i)\n", width, height);

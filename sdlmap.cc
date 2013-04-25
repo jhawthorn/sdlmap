@@ -44,7 +44,18 @@ void runloop(MapView &view){
 					mousedown = false;
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					mousedown = true;
+					switch(event.button.button){
+						case 4:
+							view.zoom_in();
+							dirty = true;
+							break;
+						case 5:
+							view.zoom_out();
+							dirty = true;
+							break;
+						default:
+							mousedown = true;
+					}
 					break;
 				case SDL_MOUSEMOTION:
 					if(mousedown){
@@ -95,7 +106,7 @@ int main(int argc, char *argv[]){
 	}
 	Coordinate center = {48.4284, -123.3656};
 	Point centerpt = center;
-	int zoom = 14;
+	int zoom = 2;
 	centerpt <<= zoom;
 	int offsetx = centerpt.x * TILESIZE - 800 / 2;
 	int offsety = centerpt.y * TILESIZE - 600 / 2;
