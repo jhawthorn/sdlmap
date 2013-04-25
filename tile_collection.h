@@ -11,14 +11,7 @@ class TileCollection{
 	int zoom;
 	TileDownloader transfers;
 	public:
-	void set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom){
-		minx = _minx;
-		maxx = _maxx;
-		miny = _miny;
-		maxy = _maxy;
-		zoom = _zoom;
-		create_tiles();
-	}
+	void set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom);
 	void create_tiles();
 	bool work();
 	void render(int offsetx, int offsety);

@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "SDL.h"
-#include "SDL_image.h"
 
 #define TILESIZE 256
 
@@ -33,83 +32,6 @@ struct Point{
 		return *this;
 	}
 };
-
-MapView::MapView(int width, int height, Coordinate &center, int zoom): zoom(zoom){
-		resize(width, height);
-		Point centerpt = center;
-		centerpt <<= zoom;
-		offsetx = centerpt.x * TILESIZE - surface->w / 2;
-		offsety = centerpt.y * TILESIZE - surface->h / 2;
-		update_bounds();
-	}
-
-/* Create tile objects for current focus */
-void TileCollection::create_tiles(){
-	std::set< std::pair<int, int> > existing;
-	for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
-		if((*it)->zoom == zoom){
-			existing.insert(std::pair<int, int>((*it)->x, (*it)->y));
-		}
-	}
-
-	for(int y = miny; y <= maxy; y++){
-		for(int x = minx; x <= maxx; x++){
-			if(existing.find(std::pair<int, int>(x, y)) == existing.end()){
-				tiles.push_back(new Tile(x, y, zoom));
-			}
-		}
-	}
-};
-
-bool TileCollection::bounded(Tile &t){
-	return t.zoom == zoom && t.x >= minx && t.x <= maxx && t.y >= miny && t.y <= maxy;
-}
-bool TileCollection::work(){
-	bool working = !transfers.empty();
-	transfers.work();
-	for(std::list<Tile *>::iterator it = tiles.begin(); transfers.queueable() && it != tiles.end(); ++it){
-		Tile *t = *it;
-		if(!bounded(*t))
-			continue;
-		if(t->state != Tile::EMPTY)
-			continue;
-		transfers.queue(t);
-		working = true;
-	}
-	return working;
-}
-
-void TileCollection::render(int offsetx, int offsety){
-	for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
-		if(bounded(**it))
-			(*it)->render(offsetx, offsety);
-	}
-	SDL_Flip(SDL_GetVideoSurface());
-}
-
-void MapView::render(){
-	tiles.render(offsetx, offsety);
-}
-
-void TileDownloader::queue(Tile *tile){
-	CURL *curl = curl_easy_init();
-	transfers.push_back(new Transfer(curl, tile));
-	curl_multi_add_handle(multi_handle, curl);
-	tile->queue();
-}
-
-TileDownloader::Transfer::Transfer(CURL *curl, Tile *tile): curl(curl), tile(tile){
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, "sdlmap/1.0");
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, MemoryStruct::write_callback);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-	curl_easy_setopt(curl, CURLOPT_URL, tile->url().c_str());
-}
-
-void TileDownloader::Transfer::finish(){
-	SDL_Surface *surface = IMG_Load_RW(SDL_RWFromMem(chunk.memory, chunk.size), 1);
-	tile->set_surface(surface);
-}
 
 void runloop(MapView &view){
 	bool mousedown = false;
@@ -172,8 +94,12 @@ int main(int argc, char *argv[]){
 		exit(-1);
 	}
 	Coordinate center = {48.4284, -123.3656};
+	Point centerpt = center;
 	int zoom = 14;
-	MapView view(800, 600, center, zoom);
+	centerpt <<= zoom;
+	int offsetx = centerpt.x * TILESIZE - 800 / 2;
+	int offsety = centerpt.y * TILESIZE - 600 / 2;
+	MapView view(offsetx, offsety, 800, 600, zoom);
 
 	runloop(view);
 	return 0;
