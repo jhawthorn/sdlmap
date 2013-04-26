@@ -8,12 +8,15 @@
 #include <string>
 #include <vector>
 
-#include <curl/curl.h>
-
 #include "SDL.h"
 #include "SDL_image.h"
 
 #define TILESIZE 256
+
+#include "sdlmap.h"
+#include "tile.h"
+#include "tile_collection.h"
+#include "map_view.h"
 
 struct Coordinate{
 	double lat, lng;
@@ -31,176 +34,14 @@ struct Point{
 	}
 };
 
-
-struct MemoryStruct {
-	char *memory;
-	size_t size;
-	public:
-	MemoryStruct(): size(0), memory(NULL){}
-	~MemoryStruct(){
-		free(memory);
+MapView::MapView(int width, int height, Coordinate &center, int zoom): zoom(zoom){
+		resize(width, height);
+		Point centerpt = center;
+		centerpt <<= zoom;
+		offsetx = centerpt.x * TILESIZE - surface->w / 2;
+		offsety = centerpt.y * TILESIZE - surface->h / 2;
+		update_bounds();
 	}
-	int append(void *contents, int len){
-		memory = (char *)realloc(memory, size + len);
-		if(memory == NULL) {
-			/* out of memory! */
-			fprintf(stderr, "not enough memory (realloc returned NULL)\n");
-			exit(-1);
-		}
-
-		memcpy(&memory[size], contents, len);
-		size += len;
-		return len;
-	}
-	static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp){
-		struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-		return mem->append(contents, size * nmemb);
-	}
-};
-
-class Tile;
-class MapView;
-class TileDownloader{
-	struct Transfer{
-		CURL *curl;
-		Tile *tile;
-		MemoryStruct chunk;
-		Transfer(CURL *curl, Tile *tile);
-		void finish();
-	};
-
-	CURLM *multi_handle;
-	std::list<Transfer *> transfers;
-	int still_running;
-	public:
-		TileDownloader(){
-			multi_handle = curl_multi_init();
-		}
-		bool empty(){
-			return transfers.empty();
-		}
-		bool queueable(){
-			return transfers.size() < 2;
-		}
-		void queue(Tile *tile);
-		int work(){
-			int msgs_left;
-			CURLMsg *msg;
-			curl_multi_perform(multi_handle, &still_running);
-
-			while((msg = curl_multi_info_read(multi_handle, &msgs_left))){
-				if(msg->msg == CURLMSG_DONE){
-					for(std::list<Transfer *>::iterator it = transfers.begin(); it != transfers.end(); ++it){
-						if((*it)->curl == msg->easy_handle){
-							(*it)->finish();
-							curl_multi_remove_handle(multi_handle, msg->easy_handle);
-							curl_easy_cleanup(msg->easy_handle);
-							transfers.erase(it);
-							delete *it;
-							break;
-						}
-					}
-				}
-			}
-			return still_running;
-		}
-};
-
-class TileCollection{
-	std::list<Tile *> tiles;
-	int minx, miny, maxx, maxy;
-	int zoom;
-	TileDownloader transfers;
-	public:
-	TileCollection(): transfers(){
-	}
-	void set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom){
-		minx = _minx;
-		maxx = _maxx;
-		miny = _miny;
-		maxy = _maxy;
-		zoom = _zoom;
-		create_tiles();
-	}
-	void create_tiles();
-	bool work();
-	void render(int offsetx, int offsety);
-	bool bounded(Tile &t);
-};
-
-class MapView{
-	public:
-		TileCollection tiles;
-		int zoom;
-		int offsetx, offsety;
-		SDL_Surface *surface;
-		MapView(int width, int height, Coordinate &center, int zoom): zoom(zoom){
-			resize(width, height);
-			Point centerpt = center;
-			centerpt <<= zoom;
-			offsetx = centerpt.x * TILESIZE - surface->w / 2;
-			offsety = centerpt.y * TILESIZE - surface->h / 2;
-			update_bounds();
-		}
-		void zoom_in(){
-			zoom++;
-			offsetx = offsetx * 2 + surface->w / 2;
-			offsety = offsety * 2 + surface->h / 2;
-		}
-		void zoom_out(){
-			zoom--;
-			offsetx = (offsetx - surface->w / 2) / 2;
-			offsety = (offsety - surface->h / 2) / 2;
-		}
-		void resize(int width, int height){
-			//printf("resize(%i, %i)\n", width, height);
-			surface = SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE);
-			if(!surface){
-				fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
-				exit(-1);
-			}
-		}
-		void update_bounds(){
-			tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
-		}
-		void render();
-};
-
-class Tile{
-	public:
-		enum State { EMPTY, ROUGH, QUEUED, LOADED } state;
-		int zoom, x, y;
-		SDL_Surface *surface;
-		Tile(int x, int y, int zoom): zoom(zoom), x(x), y(y), surface(NULL), state(EMPTY){};
-		bool loaded(){
-			return !!surface;
-		}
-		void queue(){
-			state = QUEUED;
-		}
-		void set_surface(SDL_Surface *surface){
-			this->surface = surface;
-			state = LOADED;
-		}
-		std::string url(){
-			char url[4096];
-			//snprintf(url, sizeof url, "http://a.tile.openstreetmap.org/%i/%i/%i.png", zoom, x, y);
-			snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
-			//snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
-			return std::string(url);
-		}
-		void render(int offsetx, int offsety){
-			SDL_Rect dest = {x * TILESIZE - offsetx, y * TILESIZE - offsety, TILESIZE, TILESIZE};
-			SDL_Surface *screen = SDL_GetVideoSurface();
-			if(surface){
-				//printf("render: (%i, %i, %i) => (%i, %i)\n", x, y, zoom, dest.x, dest.y);
-				SDL_BlitSurface(surface, NULL, screen, &dest);
-			}else{
-				SDL_FillRect(screen, &dest, SDL_MapRGB(screen->format, 255, 255, 255));
-			}
-		}
-
-};
 
 /* Create tile objects for current focus */
 void TileCollection::create_tiles(){
