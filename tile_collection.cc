@@ -19,17 +19,22 @@ void TileCollection::create_tiles(){
 		}
 	}
 
+	int mapwidth = (1 << zoom);
 	for(int y = miny; y <= maxy; y++){
 		for(int x = minx; x <= maxx; x++){
-			if(existing.find(std::pair<int, int>(x, y)) == existing.end()){
-				tiles.push_back(new Tile(x, y, zoom));
+			int wrapx = mod(x, mapwidth);
+			if(existing.find(std::pair<int, int>(wrapx, y)) == existing.end()){
+				tiles.push_back(new Tile(wrapx, y, zoom));
 			}
 		}
 	}
 };
 
 bool TileCollection::bounded(Tile &t){
-	return t.zoom == zoom && t.x >= minx && t.x <= maxx && t.y >= miny && t.y <= maxy;
+	if(t.zoom != zoom || t.y < miny || t.y > maxy)
+		return false;
+	int wx = t.x + (1 << zoom);
+	return (t.x >= minx && t.x <= maxx) || (wx >= minx && wx <= maxx);
 }
 bool TileCollection::work(){
 	bool working = !transfers.empty();

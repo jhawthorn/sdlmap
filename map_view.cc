@@ -32,5 +32,13 @@ void MapView::resize(int width, int height){
 	}
 }
 void MapView::update_bounds(){
+	int maxy = (1 << zoom) * TILESIZE - surface->h;
+	if(offsety < 0)
+		offsety = 0;
+	else if(offsety > maxy)
+		offsety = maxy;
+
+	/* Make our x offset loop back around*/
+	offsetx = mod(offsetx, TILESIZE * (1 << zoom));
 	tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
 }

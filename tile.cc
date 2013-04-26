@@ -25,6 +25,9 @@ std::string Tile::url(){
 }
 void Tile::render(int offsetx, int offsety){
 	SDL_Rect dest = {x * TILESIZE - offsetx, y * TILESIZE - offsety, TILESIZE, TILESIZE};
+	while(dest.x <= -TILESIZE){
+		dest.x += (1 << zoom) * TILESIZE;
+	}
 	SDL_Surface *screen = SDL_GetVideoSurface();
 	if(surface){
 		//printf("render: (%i, %i, %i) => (%i, %i)\n", x, y, zoom, dest.x, dest.y);
