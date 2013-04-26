@@ -5,6 +5,8 @@
 
 #include <list>
 #include <set>
+#include <string>
+#include <vector>
 
 #include <curl/curl.h>
 
@@ -34,10 +36,7 @@ struct MemoryStruct {
 	char *memory;
 	size_t size;
 	public:
-	MemoryStruct(){
-		size = 0;
-		memory = NULL;
-	}
+	MemoryStruct(): size(0), memory(NULL){}
 	~MemoryStruct(){
 		free(memory);
 	}
@@ -59,14 +58,62 @@ struct MemoryStruct {
 	}
 };
 
-
 class Tile;
 class MapView;
+class TileDownloader{
+	struct Transfer{
+		CURL *curl;
+		Tile *tile;
+		MemoryStruct chunk;
+		Transfer(CURL *curl, Tile *tile);
+		void finish();
+	};
+
+	CURLM *multi_handle;
+	std::list<Transfer *> transfers;
+	int still_running;
+	public:
+		TileDownloader(){
+			multi_handle = curl_multi_init();
+		}
+		bool empty(){
+			return transfers.empty();
+		}
+		bool queueable(){
+			return transfers.size() < 2;
+		}
+		void queue(Tile *tile);
+		int work(){
+			int msgs_left;
+			CURLMsg *msg;
+			curl_multi_perform(multi_handle, &still_running);
+
+			while((msg = curl_multi_info_read(multi_handle, &msgs_left))){
+				if(msg->msg == CURLMSG_DONE){
+					for(std::list<Transfer *>::iterator it = transfers.begin(); it != transfers.end(); ++it){
+						if((*it)->curl == msg->easy_handle){
+							(*it)->finish();
+							curl_multi_remove_handle(multi_handle, msg->easy_handle);
+							curl_easy_cleanup(msg->easy_handle);
+							transfers.erase(it);
+							delete *it;
+							break;
+						}
+					}
+				}
+			}
+			return still_running;
+		}
+};
+
 class TileCollection{
 	std::list<Tile *> tiles;
 	int minx, miny, maxx, maxy;
 	int zoom;
+	TileDownloader transfers;
 	public:
+	TileCollection(): transfers(){
+	}
 	void set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom){
 		minx = _minx;
 		maxx = _maxx;
@@ -76,7 +123,7 @@ class TileCollection{
 		create_tiles();
 	}
 	void create_tiles();
-	int load_some(int count);
+	bool work();
 	void render(int offsetx, int offsety);
 	bool bounded(Tile &t);
 };
@@ -106,7 +153,7 @@ class MapView{
 			offsety = (offsety - surface->h / 2) / 2;
 		}
 		void resize(int width, int height){
-			printf("resize(%i, %i)\n", width, height);
+			//printf("resize(%i, %i)\n", width, height);
 			surface = SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE);
 			if(!surface){
 				fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
@@ -121,39 +168,32 @@ class MapView{
 
 class Tile{
 	public:
+		enum State { EMPTY, ROUGH, QUEUED, LOADED } state;
 		int zoom, x, y;
 		SDL_Surface *surface;
-		Tile(int x, int y, int zoom): zoom(zoom), x(x), y(y), surface(NULL){};
+		Tile(int x, int y, int zoom): zoom(zoom), x(x), y(y), surface(NULL), state(EMPTY){};
 		bool loaded(){
 			return !!surface;
 		}
-		void load(){
-			printf("loading: (%i,%i,%i)\n", x, y, zoom);
-			MemoryStruct chunk;
-			CURL *curl = curl_easy_init();
-			CURLcode res;
-			if(curl){
-				char url[4096];
-				//snprintf(url, sizeof url, "http://a.tile.openstreetmap.org/%i/%i/%i.png", zoom, x, y);
-				//snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
-				snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
-				curl_easy_setopt(curl, CURLOPT_URL, url);
-				curl_easy_setopt(curl, CURLOPT_USERAGENT, "sdlmap/1.0");
-				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, MemoryStruct::write_callback);
-				curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-				curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-				res = curl_easy_perform(curl);
-				if(res != CURLE_OK)
-					fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-				curl_easy_cleanup(curl);
-			}
-			surface = IMG_Load_RW(SDL_RWFromMem(chunk.memory, chunk.size), 1);
+		void queue(){
+			state = QUEUED;
+		}
+		void set_surface(SDL_Surface *surface){
+			this->surface = surface;
+			state = LOADED;
+		}
+		std::string url(){
+			char url[4096];
+			//snprintf(url, sizeof url, "http://a.tile.openstreetmap.org/%i/%i/%i.png", zoom, x, y);
+			snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
+			//snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
+			return std::string(url);
 		}
 		void render(int offsetx, int offsety){
 			SDL_Rect dest = {x * TILESIZE - offsetx, y * TILESIZE - offsety, TILESIZE, TILESIZE};
 			SDL_Surface *screen = SDL_GetVideoSurface();
 			if(surface){
-				printf("render: (%i, %i, %i) => (%i, %i)\n", x, y, zoom, dest.x, dest.y);
+				//printf("render: (%i, %i, %i) => (%i, %i)\n", x, y, zoom, dest.x, dest.y);
 				SDL_BlitSurface(surface, NULL, screen, &dest);
 			}else{
 				SDL_FillRect(screen, &dest, SDL_MapRGB(screen->format, 255, 255, 255));
@@ -183,18 +223,19 @@ void TileCollection::create_tiles(){
 bool TileCollection::bounded(Tile &t){
 	return t.zoom == zoom && t.x >= minx && t.x <= maxx && t.y >= miny && t.y <= maxy;
 }
-int TileCollection::load_some(int count){
-	int loaded = 0;
-	for(std::list<Tile *>::iterator it = tiles.begin(); loaded < count && it != tiles.end(); ++it){
+bool TileCollection::work(){
+	bool working = !transfers.empty();
+	transfers.work();
+	for(std::list<Tile *>::iterator it = tiles.begin(); transfers.queueable() && it != tiles.end(); ++it){
 		Tile *t = *it;
 		if(!bounded(*t))
 			continue;
-		if(t->loaded())
+		if(t->state != Tile::EMPTY)
 			continue;
-		t->load();
-		loaded++;
+		transfers.queue(t);
+		working = true;
 	}
-	return loaded;
+	return working;
 }
 
 void TileCollection::render(int offsetx, int offsety){
@@ -207,6 +248,26 @@ void TileCollection::render(int offsetx, int offsety){
 
 void MapView::render(){
 	tiles.render(offsetx, offsety);
+}
+
+void TileDownloader::queue(Tile *tile){
+	CURL *curl = curl_easy_init();
+	transfers.push_back(new Transfer(curl, tile));
+	curl_multi_add_handle(multi_handle, curl);
+	tile->queue();
+}
+
+TileDownloader::Transfer::Transfer(CURL *curl, Tile *tile): curl(curl), tile(tile){
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "sdlmap/1.0");
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, MemoryStruct::write_callback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+	curl_easy_setopt(curl, CURLOPT_URL, tile->url().c_str());
+}
+
+void TileDownloader::Transfer::finish(){
+	SDL_Surface *surface = IMG_Load_RW(SDL_RWFromMem(chunk.memory, chunk.size), 1);
+	tile->set_surface(surface);
 }
 
 void runloop(MapView &view){
@@ -258,8 +319,7 @@ void runloop(MapView &view){
 		}
 		if(dirty){
 			view.update_bounds();
-			int loaded = view.tiles.load_some(1);
-			dirty = (loaded > 0);
+			dirty = view.tiles.work();
 			view.render();
 		}
 	}
