@@ -9,12 +9,15 @@ void MapView::render(){
 	tiles.render(offsetx, offsety);
 }
 
-void MapView::zoom_in(){
+void MapView::zoom_at(int x, int y){
 	if(zoom < 22){
 		zoom++;
-		offsetx = offsetx * 2 + surface->w / 2;
-		offsety = offsety * 2 + surface->h / 2;
+		offsetx = offsetx * 2 + x;
+		offsety = offsety * 2 + y;
 	}
+}
+void MapView::zoom_in(){
+	zoom_at(surface->w / 2, surface->h / 2);
 }
 void MapView::zoom_out(){
 	if(zoom > 3){

@@ -4,7 +4,6 @@
 #include "SDL.h"
 #include "tile_collection.h"
 
-class Coordinate;
 class MapView{
 	public:
 		TileCollection tiles;
@@ -12,6 +11,7 @@ class MapView{
 		int offsetx, offsety;
 		SDL_Surface *surface;
 		MapView(int offsetx, int offsety, int width, int height, int zoom);
+		void zoom_at(int x, int y);
 		void zoom_in();
 		void zoom_out();
 		void resize(int width, int height);

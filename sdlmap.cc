@@ -36,6 +36,7 @@ struct Point{
 void runloop(MapView &view){
 	bool mousedown = false;
 	bool dirty = true;
+	Uint32 lastclick = 0;
 	for(;;){
 		SDL_Event event;
 		while((dirty ? SDL_PollEvent : SDL_WaitEvent)(&event)){
@@ -46,7 +47,7 @@ void runloop(MapView &view){
 				case SDL_MOUSEBUTTONDOWN:
 					switch(event.button.button){
 						case 4:
-							view.zoom_in();
+							view.zoom_at(event.button.x, event.button.y);
 							dirty = true;
 							break;
 						case 5:
@@ -55,6 +56,12 @@ void runloop(MapView &view){
 							break;
 						default:
 							mousedown = true;
+							if(SDL_GetTicks() - lastclick < 250){
+								lastclick = 0;
+								view.zoom_at(event.button.x, event.button.y);
+								dirty = true;
+							}
+							lastclick = SDL_GetTicks();
 					}
 					break;
 				case SDL_MOUSEMOTION:
