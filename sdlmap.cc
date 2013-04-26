@@ -4,19 +4,12 @@
 #include <stdlib.h>
 
 #include <list>
+#include <set>
 
 #include <curl/curl.h>
 
 #include "SDL.h"
 #include "SDL_image.h"
-
-void die(const char* format, ...){
-	va_list argptr;
-	va_start(argptr, format);
-	vfprintf(stderr, format, argptr);
-	va_end(argptr);
-	exit(-1);
-}
 
 #define TILESIZE 256
 
@@ -91,11 +84,10 @@ class TileCollection{
 class MapView{
 	public:
 		TileCollection tiles;
-		Coordinate center;
 		int zoom;
 		int offsetx, offsety;
 		SDL_Surface *surface;
-		MapView(int width, int height, Coordinate &center, int zoom): center(center), zoom(zoom){
+		MapView(int width, int height, Coordinate &center, int zoom): zoom(zoom){
 			resize(width, height);
 			Point centerpt = center;
 			centerpt <<= zoom;
@@ -114,10 +106,12 @@ class MapView{
 			offsety = (offsety - surface->h / 2) / 2;
 		}
 		void resize(int width, int height){
-			printf("resize (%i, %i)\n", width, height);
+			printf("resize(%i, %i)\n", width, height);
 			surface = SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE);
-			if(!surface)
-				die("Unable to set video mode: %s\n", SDL_GetError());
+			if(!surface){
+				fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+				exit(-1);
+			}
 		}
 		void update_bounds(){
 			tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
@@ -141,8 +135,8 @@ class Tile{
 			if(curl){
 				char url[4096];
 				//snprintf(url, sizeof url, "http://a.tile.openstreetmap.org/%i/%i/%i.png", zoom, x, y);
-				snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
-				//snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
+				//snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
+				snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
 				curl_easy_setopt(curl, CURLOPT_URL, url);
 				curl_easy_setopt(curl, CURLOPT_USERAGENT, "sdlmap/1.0");
 				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, MemoryStruct::write_callback);
@@ -170,19 +164,17 @@ class Tile{
 
 /* Create tile objects for current focus */
 void TileCollection::create_tiles(){
-	/* TODO: make this NOT O(N^3)*/
+	std::set< std::pair<int, int> > existing;
+	for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
+		if((*it)->zoom == zoom){
+			existing.insert(std::pair<int, int>((*it)->x, (*it)->y));
+		}
+	}
+
 	for(int y = miny; y <= maxy; y++){
 		for(int x = minx; x <= maxx; x++){
-			bool found = false;
-			for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
-				Tile *t = *it;
-				if(t->zoom == zoom && t->x == x && t->y == y){
-					found = true;
-					break;
-				}
-			}
-			if(!found){
-				tiles.push_front(new Tile(x, y, zoom));
+			if(existing.find(std::pair<int, int>(x, y)) == existing.end()){
+				tiles.push_back(new Tile(x, y, zoom));
 			}
 		}
 	}
@@ -274,8 +266,10 @@ void runloop(MapView &view){
 }
 
 int main(int argc, char *argv[]){
-	if(SDL_Init(SDL_INIT_VIDEO))
-		die("SDL_Init failed: %s", SDL_GetError());
+	if(SDL_Init(SDL_INIT_VIDEO)){
+		fprintf(stderr, "SDL_Init failed: %s", SDL_GetError());
+		exit(-1);
+	}
 	Coordinate center = {48.4284, -123.3656};
 	int zoom = 14;
 	MapView view(800, 600, center, zoom);
