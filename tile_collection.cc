@@ -1,6 +1,5 @@
 #include <set>
 
-#include "SDL.h"
 #include "tile_collection.h"
 
 void TileCollection::set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom){
@@ -56,6 +55,5 @@ void TileCollection::render(int offsetx, int offsety){
 		if(bounded(**it))
 			(*it)->render(offsetx, offsety);
 	}
-	SDL_Flip(SDL_GetVideoSurface());
 }
 

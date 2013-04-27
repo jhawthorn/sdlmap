@@ -33,6 +33,13 @@ struct Point{
 	}
 };
 
+static void resize(int width, int height){
+	if(!SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE)){
+		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+		exit(-1);
+	}
+}
+
 void runloop(MapView &view){
 	bool mousedown = false;
 	bool dirty = true;
@@ -85,12 +92,10 @@ void runloop(MapView &view){
 							view.zoom_out();
 							dirty = true;
 							break;
-						default:
-							printf("The %s key was pressed!\n", SDL_GetKeyName(event.key.keysym.sym));
-							break;
 					}
 					break;
 				case SDL_VIDEORESIZE:
+					resize(event.resize.w, event.resize.h);
 					view.resize(event.resize.w, event.resize.h);
 					dirty = true;
 					break;
@@ -102,6 +107,7 @@ void runloop(MapView &view){
 			view.update_bounds();
 			dirty = view.tiles.work();
 			view.render();
+			SDL_Flip(SDL_GetVideoSurface());
 		}
 	}
 }
@@ -113,11 +119,13 @@ int main(int argc, char *argv[]){
 	}
 	Coordinate center = {48.4284, -123.3656};
 	Point centerpt = center;
+	int width = 800, height = 600;
 	int zoom = 3;
 	centerpt <<= zoom;
-	int offsetx = centerpt.x * TILESIZE - 800 / 2;
-	int offsety = centerpt.y * TILESIZE - 600 / 2;
-	MapView view(offsetx, offsety, 800, 600, zoom);
+	int offsetx = centerpt.x * TILESIZE - width / 2;
+	int offsety = centerpt.y * TILESIZE - height / 2;
+	resize(width, height);
+	MapView view(offsetx, offsety, width, height, zoom);
 
 	runloop(view);
 	return 0;

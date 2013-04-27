@@ -17,25 +17,22 @@ void MapView::zoom_at(int x, int y){
 	}
 }
 void MapView::zoom_in(){
-	zoom_at(surface->w / 2, surface->h / 2);
+	zoom_at(width / 2, height / 2);
 }
 void MapView::zoom_out(){
 	if(zoom > 3){
 		zoom--;
-		offsetx = (offsetx - surface->w / 2) / 2;
-		offsety = (offsety - surface->h / 2) / 2;
+		offsetx = (offsetx - width / 2) / 2;
+		offsety = (offsety - height / 2) / 2;
 	}
 }
-void MapView::resize(int width, int height){
+void MapView::resize(int w, int h){
 	//printf("resize(%i, %i)\n", width, height);
-	surface = SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE);
-	if(!surface){
-		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
-		exit(-1);
-	}
+	width = w;
+	height = h;
 }
 void MapView::update_bounds(){
-	int maxy = (1 << zoom) * TILESIZE - surface->h;
+	int maxy = (1 << zoom) * TILESIZE - height;
 	if(offsety < 0)
 		offsety = 0;
 	else if(offsety > maxy)
@@ -43,5 +40,5 @@ void MapView::update_bounds(){
 
 	/* Make our x offset loop back around*/
 	offsetx = mod(offsetx, TILESIZE * (1 << zoom));
-	tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + surface->w) / TILESIZE, (offsety + surface->h) / TILESIZE, zoom);
+	tiles.set_bounds(offsetx / TILESIZE, offsety / TILESIZE, (offsetx + width) / TILESIZE, (offsety + height) / TILESIZE, zoom);
 }
