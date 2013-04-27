@@ -37,9 +37,9 @@ bool TileCollection::bounded(Tile &t){
 	return (t.x >= minx && t.x <= maxx) || (wx >= minx && wx <= maxx);
 }
 bool TileCollection::work(){
-	bool working = !transfers.empty();
+	bool working = !!transfers.active();
 	transfers.work();
-	for(std::list<Tile *>::iterator it = tiles.begin(); transfers.queueable() && it != tiles.end(); ++it){
+	for(std::list<Tile *>::iterator it = tiles.begin(); transfers.active() < 2 && it != tiles.end(); ++it){
 		Tile *t = *it;
 		if(!bounded(*t))
 			continue;

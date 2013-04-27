@@ -113,7 +113,7 @@ int main(int argc, char *argv[]){
 	}
 	Coordinate center = {48.4284, -123.3656};
 	Point centerpt = center;
-	int zoom = 2;
+	int zoom = 3;
 	centerpt <<= zoom;
 	int offsetx = centerpt.x * TILESIZE - 800 / 2;
 	int offsety = centerpt.y * TILESIZE - 600 / 2;

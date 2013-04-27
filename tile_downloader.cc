@@ -25,11 +25,8 @@ size_t MemoryStruct::write_callback(void *contents, size_t size, size_t nmemb, v
 
 TileDownloader::TileDownloader(): multi_handle(curl_multi_init()){
 }
-bool TileDownloader::empty(){
-	return transfers.empty();
-}
-bool TileDownloader::queueable(){
-	return transfers.size() < 2;
+int TileDownloader::active(){
+	return transfers.size();
 }
 void TileDownloader::queue(Tile *tile){
 	CURL *curl = curl_easy_init();

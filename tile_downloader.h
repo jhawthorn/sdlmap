@@ -30,8 +30,7 @@ class TileDownloader{
 	int still_running;
 	public:
 	TileDownloader();
-	bool empty();
-	bool queueable();
+	int active();
 	void queue(Tile *tile);
 	int work();
 };
