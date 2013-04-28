@@ -1,14 +1,19 @@
+#include "math.h"
 #include "map_view.h"
 
-MapView::MapView(int offsetx, int offsety, int width, int height, int zoom): offsetx(offsetx), offsety(offsety), zoom(zoom){
+MapView::MapView(int width, int height, int zoom): offsetx(0), offsety(0), zoom(zoom){
 	resize(width, height);
 	update_bounds();
 }
-
+void MapView::center_coords(double lat, double lng){
+	double x = (lng + 180.0f) / 360.0f;
+	double y = (1.0f - log(tan(lat * M_PI / 180.0f) + 1.0f / cos(lat * M_PI / 180.0f)) / M_PI) / 2.0f;
+	int offsetx = x * (TILESIZE << zoom) - width / 2;
+	int offsety = y * (TILESIZE << zoom) - height / 2;
+}
 void MapView::render(){
 	tiles.render(offsetx, offsety);
 }
-
 void MapView::zoom_at(int x, int y){
 	if(zoom < 22){
 		zoom++;

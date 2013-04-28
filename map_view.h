@@ -9,7 +9,8 @@ class MapView{
 		TileCollection tiles;
 		int zoom;
 		int offsetx, offsety;
-		MapView(int offsetx, int offsety, int width, int height, int zoom);
+		MapView(int width, int height, int zoom);
+		void center_coords(double lat, double lng);
 		void zoom_at(int x, int y);
 		void zoom_in();
 		void zoom_out();

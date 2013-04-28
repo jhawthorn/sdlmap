@@ -17,22 +17,6 @@
 #include "tile_collection.h"
 #include "map_view.h"
 
-struct Coordinate{
-	double lat, lng;
-};
-
-struct Point{
-	double x, y;
-	Point(Coordinate &c):
-		x((c.lng + 180.0f) / 360.0f),
-		y((1.0f - log(tan(c.lat * M_PI / 180.0f) + 1.0f / cos(c.lat * M_PI / 180.0f)) / M_PI) / 2.0f) {}
-	Point &operator<<=(int zoom){
-		x *= (1 << zoom);
-		y *= (1 << zoom);
-		return *this;
-	}
-};
-
 static void resize(int width, int height){
 	if(!SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE)){
 		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
@@ -117,15 +101,11 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "SDL_Init failed: %s", SDL_GetError());
 		exit(-1);
 	}
-	Coordinate center = {48.4284, -123.3656};
-	Point centerpt = center;
 	int width = 800, height = 600;
 	int zoom = 3;
-	centerpt <<= zoom;
-	int offsetx = centerpt.x * TILESIZE - width / 2;
-	int offsety = centerpt.y * TILESIZE - height / 2;
 	resize(width, height);
-	MapView view(offsetx, offsety, width, height, zoom);
+	MapView view(width, height, zoom);
+	view.center_coords(48.4284, -123.3656);
 
 	runloop(view);
 	return 0;
