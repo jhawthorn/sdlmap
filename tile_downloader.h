@@ -25,10 +25,10 @@ class TileDownloader{
 		void finish();
 	};
 
-	CURLM *multi_handle;
 	std::list<Transfer *> transfers;
 	int still_running;
 	public:
+	CURLM *multi_handle;
 	TileDownloader();
 	int active();
 	void queue(Tile *tile);

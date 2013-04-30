@@ -1,11 +1,12 @@
 CXXFLAGS=`sdl-config --cflags` -g
-LIBS=`sdl-config --libs` -lcurl -lSDL_image -lts
+LIBS=`sdl-config --libs` -lcurl -lSDL_image
 TARGET=sdlmap
 
-all: $(TARGET)
-
-$(TARGET): sdlmap.o tile_downloader.o tile_collection.o map_view.o tile.o ink.o
+sdlmap: sdlmap.o tile_downloader.o tile_collection.o map_view.o tile.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+kobomap: sdlmap.o tile_downloader.o tile_collection.o map_view.o tile.o ink.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS) -lts
 
 clean:
 	$(RM) $(TARGET) *.o

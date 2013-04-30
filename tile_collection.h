@@ -9,8 +9,8 @@ class TileCollection{
 	std::list<Tile *> tiles;
 	int minx, miny, maxx, maxy;
 	int zoom;
-	TileDownloader transfers;
 	public:
+	TileDownloader transfers;
 	void set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom);
 	void create_tiles();
 	bool work();
