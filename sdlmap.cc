@@ -101,8 +101,9 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "SDL_Init failed: %s", SDL_GetError());
 		exit(-1);
 	}
-	int width = 800, height = 600;
-	int zoom = 3;
+	SDL_ShowCursor(0);
+	int width = 600, height = 800;
+	int zoom = 10;
 	resize(width, height);
 	MapView view(width, height, zoom);
 	view.center_coords(48.4284, -123.3656);

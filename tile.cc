@@ -17,8 +17,8 @@ void Tile::load(char *memory, int size){
 std::string Tile::url(){
 	char url[4096];
 	//snprintf(url, sizeof url, "http://a.tile.openstreetmap.org/%i/%i/%i.png", zoom, x, y);
-	//snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
-	snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
+	snprintf(url, sizeof url, "http://a.tile.stamen.com/toner/%i/%i/%i.png", zoom, x, y);
+	//snprintf(url, sizeof url, "http://mts0.google.com/vt/hl=en&src=api&x=%i&s=&y=%i&z=%i", x, y, zoom);
 	//snprintf(url, sizeof url, "http://a.www.toolserver.org/tiles/bw-mapnik/%i/%i/%i.png", zoom, x, y);
 	return std::string(url);
 }
