@@ -43,7 +43,11 @@ int TileDownloader::work(){
 		if(msg->msg == CURLMSG_DONE){
 			for(std::list<Transfer *>::iterator it = transfers.begin(); it != transfers.end(); ++it){
 				if((*it)->curl == msg->easy_handle){
-					(*it)->finish();
+					if(msg->data.result){
+						fprintf(stderr, "Error loading '%s': %i\n", (*it)->tile->url().c_str(), msg->data.result);
+					}else{
+						(*it)->finish();
+					}
 					curl_multi_remove_handle(multi_handle, msg->easy_handle);
 					curl_easy_cleanup(msg->easy_handle);
 					transfers.erase(it);
