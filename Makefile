@@ -5,7 +5,7 @@ TARGET=sdlmap
 sdlmap: sdlmap.o tile_downloader.o tile_collection.o map_view.o tile.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-kobomap: sdlmap.o tile_downloader.o tile_collection.o map_view.o tile.o ink.o
+kobomap: kobomap.o tile_downloader.o tile_collection.o map_view.o tile.o ink.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS) -lts
 
 clean:

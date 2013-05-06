@@ -17,10 +17,7 @@
 #include "tile_collection.h"
 #include "map_view.h"
 #include "tslib.h"
-
-#ifdef EINK
 #include "ink.h"
-#endif
 
 static void resize(int width, int height){
 	SDL_Surface *screen;
@@ -49,6 +46,8 @@ void runloop(MapView &view){
 	struct timeval lastclick;
 	int lastx, lasty;
 	lastx = lasty = -1;
+	bool full = true;
+	bool drag = false;
 	for(;;){
 		int maxfd = -1;
 
@@ -64,6 +63,9 @@ void runloop(MapView &view){
 				if(lastx >= 0 && lasty >= 0){
 					view.offsetx += lastx - samples[i].x;
 					view.offsety += lasty - samples[i].y;
+				}else{
+					/* start of drag */
+					drag = full = true;
 				}
 				lastx = samples[i].x;
 				lasty = samples[i].y;
@@ -74,14 +76,24 @@ void runloop(MapView &view){
 				}
 				memcpy(&lastclick, &samples[i].tv, sizeof(struct timeval));
 				lastx = lasty = -1;
+				drag = false;
+				full = true;
 			}
 		}
 
+		if(drag && full){
+			SDL_FillRect(SDL_GetVideoSurface(), NULL, SDL_MapRGB(SDL_GetVideoSurface()->format, 255, 255, 255));
+			SDL_Flip(SDL_GetVideoSurface());
+			Ink_Update(INK_UPDATE_FULL);
+		}
 		view.update_bounds();
 		view.tiles.work();
 		view.render();
 		SDL_Flip(SDL_GetVideoSurface());
-		Ink_UpdateFull();
+
+		Ink_Update((full ? INK_UPDATE_FULL : INK_UPDATE_PARTIAL) | (drag ? INK_UPDATE_MERGE : 0));
+
+		full = false;
 	}
 }
 
@@ -96,6 +108,8 @@ int main(int argc, char *argv[]){
 	resize(width, height);
 	MapView view(width, height, zoom);
 	view.center_coords(48.4284, -123.3656);
+
+	Ink_Init();
 
 	runloop(view);
 	return 0;
