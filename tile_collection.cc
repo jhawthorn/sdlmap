@@ -2,46 +2,61 @@
 
 #include "tile_collection.h"
 
+bool Range::contains(int x, int y, int d) const {
+	assert(d <= depth);
+	int dz = depth - d;
+	//printf("@%i (%i,%i) <= (%i,%i) <= (%i,%i)\n", d, minx >> dz, miny >> dz, x, y, maxx >> dz, maxy >> dz);
+	return x >= minx >> dz && y >= miny >> dz && x <= maxx >> dz && y <= maxy >> dz;
+}
+
+Quad::Quad(int x, int y, int depth): x(x), y(y), depth(depth){
+	tile = NULL;
+	for(int i = 0; i < 4; i++)
+		children[i] = NULL;
+}
+void Quad::queryRange(std::list<Tile *> &l, const Range &r){
+	if(!r.contains(x, y, depth))
+		return;
+
+	if(!tile)
+		tile = new Tile(x, y, depth);
+
+	if(depth < r.depth){
+		buildChildren();
+		for(int i = 0; i < 4; i++)
+			children[i]->queryRange(l, r);
+	}else{
+		l.push_back(tile);
+	}
+}
+void Quad::buildChildren(){
+	if(!children[0])
+		children[0] = new Quad(x*2,   y*2, depth+1);
+	if(!children[1])
+		children[1] = new Quad(x*2+1, y*2, depth+1);
+	if(!children[2])
+		children[2] = new Quad(x*2,   y*2+1, depth+1);
+	if(!children[3])
+		children[3] = new Quad(x*2+1, y*2+1, depth+1);
+}
+
 void TileCollection::set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom){
-	minx = _minx;
-	maxx = _maxx;
-	miny = _miny;
-	maxy = _maxy;
-	zoom = _zoom;
-	create_tiles();
+	range.minx = _minx;
+	range.maxx = _maxx;
+	range.miny = _miny;
+	range.maxy = _maxy;
+	range.depth = _zoom;
 }
-void TileCollection::create_tiles(){
-	std::set< std::pair<int, int> > existing;
-	for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
-		if((*it)->zoom == zoom){
-			existing.insert(std::pair<int, int>((*it)->x, (*it)->y));
-		}
-	}
 
-	int mapwidth = (1 << zoom);
-	for(int y = miny; y <= maxy; y++){
-		for(int x = minx; x <= maxx; x++){
-			int wrapx = mod(x, mapwidth);
-			if(existing.find(std::pair<int, int>(wrapx, y)) == existing.end()){
-				tiles.push_back(new Tile(wrapx, y, zoom));
-			}
-		}
-	}
-};
-
-bool TileCollection::bounded(Tile &t){
-	if(t.zoom != zoom || t.y < miny || t.y > maxy)
-		return false;
-	int wx = t.x + (1 << zoom);
-	return (t.x >= minx && t.x <= maxx) || (wx >= minx && wx <= maxx);
-}
 bool TileCollection::work(){
 	bool working = !!transfers.active();
 	transfers.work();
-	for(std::list<Tile *>::iterator it = tiles.begin(); transfers.active() < 2 && it != tiles.end(); ++it){
+
+	std::list<Tile *> l;
+	quad.queryRange(l, range);
+
+	for(std::list<Tile *>::iterator it = l.begin(); transfers.active() < 2 && it != l.end(); ++it){
 		Tile *t = *it;
-		if(!bounded(*t))
-			continue;
 		if(t->state != Tile::EMPTY)
 			continue;
 		transfers.queue(t);
@@ -51,9 +66,10 @@ bool TileCollection::work(){
 }
 
 void TileCollection::render(int offsetx, int offsety){
-	for(std::list<Tile *>::iterator it = tiles.begin(); it != tiles.end(); ++it){
-		if(bounded(**it))
-			(*it)->render(offsetx, offsety);
+	std::list<Tile *> l;
+	quad.queryRange(l, range);
+	for(std::list<Tile *>::iterator it = l.begin(); it != l.end(); ++it){
+		(*it)->render(offsetx, offsety);
 	}
 }
 
