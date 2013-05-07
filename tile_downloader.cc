@@ -44,7 +44,7 @@ int TileDownloader::work(){
 			for(std::list<Transfer *>::iterator it = transfers.begin(); it != transfers.end(); ++it){
 				if((*it)->curl == msg->easy_handle){
 					if(msg->data.result){
-						fprintf(stderr, "Error loading '%s': %i\n", (*it)->tile->url().c_str(), msg->data.result);
+						fprintf(stderr, "Error loading '%s': %s\n", (*it)->tile->url().c_str(), curl_easy_strerror(msg->data.result));
 					}else{
 						(*it)->finish();
 					}
