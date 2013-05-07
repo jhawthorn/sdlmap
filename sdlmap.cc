@@ -28,6 +28,7 @@ void runloop(MapView &view){
 	bool mousedown = false;
 	bool dirty = true;
 	Uint32 lastclick = 0;
+	int zoomdf = 0;
 	for(;;){
 		SDL_Event event;
 		while((dirty ? SDL_PollEvent : SDL_WaitEvent)(&event)){
@@ -38,12 +39,18 @@ void runloop(MapView &view){
 				case SDL_MOUSEBUTTONDOWN:
 					switch(event.button.button){
 						case 4:
-							view.zoom_at(event.button.x, event.button.y);
-							dirty = true;
+							if(++zoomdf >= 5){
+								zoomdf = 0;
+								view.zoom_at(event.button.x, event.button.y);
+								dirty = true;
+							}
 							break;
 						case 5:
-							view.zoom_out();
-							dirty = true;
+							if(--zoomdf <= -5){
+								zoomdf = 0;
+								view.zoom_out();
+								dirty = true;
+							}
 							break;
 						default:
 							mousedown = true;
@@ -103,6 +110,7 @@ int main(int argc, char *argv[]){
 	}
 	int width = 600, height = 800;
 	int zoom = 12;
+	SDL_WM_SetCaption("map", NULL);
 	resize(width, height);
 	MapView view(width, height, zoom);
 	view.center_coords(48.4284, -123.3656);
