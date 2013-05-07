@@ -30,6 +30,20 @@ static void resize(int width, int height){
 	fprintf(stderr, "bpp: %i\n", screen->format->BitsPerPixel);
 }
 
+void tobw(SDL_Surface *surface){
+	SDL_PixelFormat *fmt = surface->format;
+	if(fmt->BitsPerPixel != 8){
+		fprintf(stderr, "Not an 8-bit surface.\n");
+		exit(-1);
+	}
+	Uint8 black = SDL_MapRGB(fmt, 0,  0,  0);
+	Uint8 white = SDL_MapRGB(fmt, 255,255,255);
+	Uint8 *pixels = (Uint8 *)surface->pixels;
+	for(int idx = 0; idx < surface->h * surface->pitch; idx++){
+		pixels[idx] = pixels[idx] < 128 ? black : white;
+	}
+}
+
 void runloop(MapView &view){
 	struct tsdev *ts;
 	if(!(ts = ts_open("/dev/input/event1", 1))){
@@ -59,40 +73,50 @@ void runloop(MapView &view){
 		}
 		for(int i = 0; i < ret; i++){
 			printf("%ld.%06ld: %6d %6d %6d\n", samples[i].tv.tv_sec, samples[i].tv.tv_usec, samples[i].x, samples[i].y, samples[i].pressure);
+			if(drag){
+				view.offsetx += lastx - samples[i].x;
+				view.offsety += lasty - samples[i].y;
+			}
 			if(samples[i].pressure){
-				if(lastx >= 0 && lasty >= 0){
-					view.offsetx += lastx - samples[i].x;
-					view.offsety += lasty - samples[i].y;
-				}else{
+				if(!drag){
 					/* start of drag */
 					drag = full = true;
 				}
-				lastx = samples[i].x;
-				lasty = samples[i].y;
 			}else{
 				unsigned int timediff = (samples[i].tv.tv_sec - lastclick.tv_sec) * 1000000 + (samples[i].tv.tv_usec - lastclick.tv_usec);
 				if(timediff < 500000){
 					view.zoom_at(samples[i].x, samples[i].y);
 				}
 				memcpy(&lastclick, &samples[i].tv, sizeof(struct timeval));
-				lastx = lasty = -1;
 				drag = false;
 				full = true;
 			}
+			lastx = samples[i].x;
+			lasty = samples[i].y;
 		}
 
-		if(drag && full){
-			SDL_FillRect(SDL_GetVideoSurface(), NULL, SDL_MapRGB(SDL_GetVideoSurface()->format, 255, 255, 255));
-			SDL_Flip(SDL_GetVideoSurface());
-			Ink_Update(INK_UPDATE_FULL);
-		}
+		//if(drag && full){
+		//	Ink_Wait();
+		//	SDL_FillRect(SDL_GetVideoSurface(), NULL, SDL_MapRGB(SDL_GetVideoSurface()->format, 255, 255, 255));
+		//	SDL_Flip(SDL_GetVideoSurface());
+		//	Ink_Update(INK_UPDATE_FULL);
+		//}
+
 		view.update_bounds();
 		view.tiles.work();
 		view.render();
+
+		if(drag)
+			tobw(SDL_GetVideoSurface());
+		Ink_Wait(); /* wait for display to update before drawing again */
 		SDL_Flip(SDL_GetVideoSurface());
 
-		Ink_Update((full ? INK_UPDATE_FULL : INK_UPDATE_PARTIAL) | (drag ? INK_UPDATE_MERGE : 0));
+		if(full)
+			Ink_Update(INK_UPDATE_FULL);
+		else
+			Ink_Update(drag ? INK_UPDATE_MERGE : INK_UPDATE_PARTIAL);
 
+		printf("render!!!\n");
 		full = false;
 	}
 }
@@ -104,7 +128,7 @@ int main(int argc, char *argv[]){
 	}
 	SDL_ShowCursor(0);
 	int width = 600, height = 800;
-	int zoom = 12;
+	int zoom = 14;
 	resize(width, height);
 	MapView view(width, height, zoom);
 	view.center_coords(48.4284, -123.3656);

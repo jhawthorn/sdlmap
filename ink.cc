@@ -9,6 +9,8 @@
 
 #include "ink.h"
 
+static int marker = 0;
+
 static int mxcfb(){
 	static int _fbfd = -1;
 	if(_fbfd < 0)
@@ -28,8 +30,11 @@ void Ink_Init(){
 	ioctl(mxcfb(), MXCFB_SET_MERGE_ON_WAVEFORM_MISMATCH, &yes);
 }
 
+void Ink_Wait(){
+	ioctl(mxcfb(), MXCFB_WAIT_FOR_UPDATE_COMPLETE, &marker);
+}
+
 static void _UpdateRect(int x, int y, int w, int h, int flags){
-	static int marker = 0;
 	struct mxcfb_update_data param;
 
 	param.update_region.left = x;
@@ -46,7 +51,6 @@ static void _UpdateRect(int x, int y, int w, int h, int flags){
 		perror("Error sending update information");
 		exit(1);
 	}
-	ioctl(mxcfb(), MXCFB_WAIT_FOR_UPDATE_COMPLETE, &marker);
 }
 
 void Ink_UpdateRect(int x, int y, int w, int h, int flags){

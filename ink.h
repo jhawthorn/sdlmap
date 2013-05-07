@@ -6,4 +6,5 @@
 void Ink_Init();
 void Ink_UpdateRect(int x, int y, int w, int h, int flags);
 void Ink_Update(int flags);
+void Ink_Wait();
 
