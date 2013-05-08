@@ -11,7 +11,9 @@ void Tile::queue(){
 	state = QUEUED;
 }
 void Tile::load(char *memory, int size){
-	surface = IMG_Load_RW(SDL_RWFromMem(memory, size), 1);
+	SDL_Surface *img = IMG_Load_RW(SDL_RWFromMem(memory, size), 1);
+	surface = SDL_DisplayFormat(img);
+	SDL_FreeSurface(img);
 	state = LOADED;
 }
 std::string Tile::url(){

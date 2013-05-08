@@ -22,10 +22,6 @@
 static void resize(int width, int height){
 	SDL_Surface *screen;
 	fprintf(stderr, "setting video mode...\n");
-	if(!(screen = SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE))){
-		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
-		exit(-1);
-	}
 
 	fprintf(stderr, "bpp: %i\n", screen->format->BitsPerPixel);
 }
@@ -62,48 +58,51 @@ void runloop(MapView &view){
 	lastx = lasty = -1;
 	bool full = true;
 	bool drag = false;
+	bool dirty = true;
 	for(;;){
 		int maxfd = -1;
 
-		struct ts_sample samples[64];
-		int ret = ts_read(ts, &samples[0], 64);
-		if(ret < 0){
-			perror("ts_read");
-			exit(1);
-		}
-		for(int i = 0; i < ret; i++){
-			printf("%ld.%06ld: %6d %6d %6d\n", samples[i].tv.tv_sec, samples[i].tv.tv_usec, samples[i].x, samples[i].y, samples[i].pressure);
-			if(drag){
-				view.offsetx += lastx - samples[i].x;
-				view.offsety += lasty - samples[i].y;
+		/* todo: should really be done with select() and timeouts */
+		Uint32 startticks = SDL_GetTicks();
+		do{
+			struct ts_sample samples[64];
+			int ret = ts_read(ts, &samples[0], 64);
+			if(ret < 0){
+				perror("ts_read");
+				exit(1);
 			}
-			if(samples[i].pressure){
-				if(!drag){
-					/* start of drag */
-					drag = full = true;
+			for(int i = 0; i < ret; i++){
+				printf("%ld.%06ld: %6d %6d %6d\n", samples[i].tv.tv_sec, samples[i].tv.tv_usec, samples[i].x, samples[i].y, samples[i].pressure);
+				if(drag){
+					view.offsetx += lastx - samples[i].x;
+					view.offsety += lasty - samples[i].y;
+					dirty = true;
 				}
-			}else{
-				unsigned int timediff = (samples[i].tv.tv_sec - lastclick.tv_sec) * 1000000 + (samples[i].tv.tv_usec - lastclick.tv_usec);
-				if(timediff < 500000){
-					view.zoom_at(samples[i].x, samples[i].y);
+				if(samples[i].pressure){
+					if(!drag){
+						/* start of drag */
+						drag = full = true;
+					}
+				}else{
+					unsigned int timediff = (samples[i].tv.tv_sec - lastclick.tv_sec) * 1000000 + (samples[i].tv.tv_usec - lastclick.tv_usec);
+					printf("timediff: %i\n", timediff);
+					if(timediff < 500000){
+						view.zoom_at(samples[i].x, samples[i].y);
+						dirty = true;
+					}
+					memcpy(&lastclick, &samples[i].tv, sizeof(struct timeval));
+					drag = false;
+					full = true;
 				}
-				memcpy(&lastclick, &samples[i].tv, sizeof(struct timeval));
-				drag = false;
-				full = true;
+				lastx = samples[i].x;
+				lasty = samples[i].y;
 			}
-			lastx = samples[i].x;
-			lasty = samples[i].y;
-		}
+			view.update_bounds();
+			if(view.tiles.work())
+				dirty = true;
+		}while(!dirty || SDL_GetTicks() - startticks < 200);
+		dirty = false;
 
-		//if(drag && full){
-		//	Ink_Wait();
-		//	SDL_FillRect(SDL_GetVideoSurface(), NULL, SDL_MapRGB(SDL_GetVideoSurface()->format, 255, 255, 255));
-		//	SDL_Flip(SDL_GetVideoSurface());
-		//	Ink_Update(INK_UPDATE_FULL);
-		//}
-
-		view.update_bounds();
-		view.tiles.work();
 		view.render();
 
 		if(drag)
@@ -111,12 +110,13 @@ void runloop(MapView &view){
 		Ink_Wait(); /* wait for display to update before drawing again */
 		SDL_Flip(SDL_GetVideoSurface());
 
-		if(full)
+		if(drag && full)
+			Ink_Update(INK_UPDATE_PARTIAL);
+		else if(full)
 			Ink_Update(INK_UPDATE_FULL);
 		else
 			Ink_Update(drag ? INK_UPDATE_MERGE : INK_UPDATE_PARTIAL);
 
-		printf("render!!!\n");
 		full = false;
 	}
 }
@@ -128,8 +128,8 @@ int main(int argc, char *argv[]){
 	}
 	SDL_ShowCursor(0);
 	int width = 600, height = 800;
-	int zoom = 14;
-	resize(width, height);
+	int zoom = 9;
+	Ink_SetVideoMode(width, height);
 	MapView view(width, height, zoom);
 	view.center_coords(48.4284, -123.3656);
 

@@ -4,6 +4,7 @@
 #define INK_UPDATE_MERGE 2
 
 void Ink_Init();
+void Ink_SetVideoMode(int width, int height);
 void Ink_UpdateRect(int x, int y, int w, int h, int flags);
 void Ink_Update(int flags);
 void Ink_Wait();
