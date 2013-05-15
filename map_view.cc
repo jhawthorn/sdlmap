@@ -14,6 +14,10 @@ void MapView::center_coords(double lat, double lng){
 void MapView::render(){
 	tiles.render(offsetx, offsety);
 }
+void MapView::move_by(int dx, int dy){
+	offsetx += dx;
+	offsety += dy;
+}
 void MapView::zoom_at(int x, int y){
 	if(zoom < 22){
 		zoom++;

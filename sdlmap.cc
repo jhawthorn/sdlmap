@@ -64,8 +64,7 @@ void runloop(MapView &view){
 					break;
 				case SDL_MOUSEMOTION:
 					if(mousedown){
-						view.offsetx -= event.motion.xrel;
-						view.offsety -= event.motion.yrel;
+						view.move_by(-event.motion.xrel, -event.motion.yrel);
 						dirty = true;
 					}
 					break;

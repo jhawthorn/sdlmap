@@ -5,12 +5,13 @@
 
 class MapView{
 	int width, height;
+	int offsetx, offsety;
 	public:
 		TileCollection tiles;
 		int zoom;
-		int offsetx, offsety;
 		MapView(int width, int height, int zoom);
 		void center_coords(double lat, double lng);
+		void move_by(int dx, int dy);
 		void zoom_at(int x, int y);
 		void zoom_in();
 		void zoom_out();
