@@ -17,12 +17,12 @@
 #include "tile_collection.h"
 #include "map_view.h"
 
-static void resize(int width, int height){
-	if(!SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE)){
-		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
-		exit(-1);
-	}
-}
+//static void resize(int width, int height){
+//	if(!SDL_CreateWindow("SDLmap", width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE)){
+//		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
+//		exit(-1);
+//	}
+//}
 
 void runloop(MapView &view){
 	bool mousedown = false;
@@ -97,7 +97,7 @@ void runloop(MapView &view){
 			view.update_bounds();
 			dirty = view.tiles.work();
 			view.render();
-			SDL_Flip(SDL_GetVideoSurface());
+			//SDL_Flip(SDL_GetVideoSurface());
 		}
 	}
 }
@@ -109,9 +109,10 @@ int main(int argc, char *argv[]){
 	}
 	int width = 600, height = 800;
 	int zoom = 12;
-	SDL_WM_SetCaption("map", NULL);
-	resize(width, height);
-	MapView view(width, height, zoom);
+	SDL_Window *window = SDL_CreateWindow("SDLmap", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
+	//resize(width, height);
+
+	MapView view(window, width, height, zoom);
 	view.center_coords(48.4284, -123.3656);
 
 	runloop(view);

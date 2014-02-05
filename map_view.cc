@@ -1,7 +1,7 @@
 #include "math.h"
 #include "map_view.h"
 
-MapView::MapView(int width, int height, int zoom): offsetx(0), offsety(0), zoom(zoom){
+MapView::MapView(SDL_Window *window, int width, int height, int zoom): window(window), offsetx(0), offsety(0), zoom(zoom){
 	resize(width, height);
 	update_bounds();
 }
@@ -12,8 +12,9 @@ void MapView::center_coords(double lat, double lng){
 	offsety = y * (TILESIZE << zoom) - height / 2;
 }
 void MapView::render(){
-	SDL_Surface *screen = SDL_GetVideoSurface();
+	SDL_Surface *screen = SDL_GetWindowSurface(window);
 	tiles.render(screen, offsetx, offsety);
+	SDL_UpdateWindowSurface(window);
 }
 void MapView::move_by(int dx, int dy){
 	offsetx += dx;
