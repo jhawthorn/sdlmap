@@ -84,11 +84,12 @@ void runloop(MapView &view){
 							break;
 					}
 					break;
-				//case SDL_VIDEORESIZE:
-				//	resize(event.resize.w, event.resize.h);
-				//	view.resize(event.resize.w, event.resize.h);
-				//	dirty = true;
-				//	break;
+				case SDL_WINDOWEVENT:
+					if(event.window.event == SDL_WINDOWEVENT_RESIZED){
+						view.resize(event.window.data1, event.window.data2);
+						dirty = true;
+					}
+					break;
 				case SDL_QUIT:
 					exit(0);
 			}
@@ -97,7 +98,6 @@ void runloop(MapView &view){
 			view.update_bounds();
 			dirty = view.tiles.work();
 			view.render();
-			//SDL_Flip(SDL_GetVideoSurface());
 		}
 	}
 }
@@ -109,8 +109,7 @@ int main(int argc, char *argv[]){
 	}
 	int width = 600, height = 800;
 	int zoom = 12;
-	SDL_Window *window = SDL_CreateWindow("SDLmap", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
-	//resize(width, height);
+	SDL_Window *window = SDL_CreateWindow("SDLmap", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
 
 	MapView view(window, width, height, zoom);
 	view.center_coords(48.4284, -123.3656);
