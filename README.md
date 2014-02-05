@@ -25,7 +25,10 @@ $ ./sdlmap
 
 ### Ubuntu
 
-Ask [@senjai](https://github.com/senjai)
+```
+sudo apt-get install libsdl2-image-2.0-0 libcurl4-gnutls-dev
+```
+
 
 
 
