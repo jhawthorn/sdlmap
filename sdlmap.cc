@@ -17,13 +17,6 @@
 #include "tile_collection.h"
 #include "map_view.h"
 
-//static void resize(int width, int height){
-//	if(!SDL_CreateWindow("SDLmap", width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE)){
-//		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
-//		exit(-1);
-//	}
-//}
-
 void runloop(MapView &view){
 	bool mousedown = false;
 	bool dirty = true;
