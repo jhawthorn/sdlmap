@@ -17,5 +17,15 @@ $ ./sdlmap
 * SDL\_image 2
 * libcurl
 
+### Arch linux
+
+```
+# pacman -S sdl2 sdl2_image
+```
+
+### Ubuntu
+
+Ask [@senjai](https://github.com/senjai)
+
 
 

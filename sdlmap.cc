@@ -30,29 +30,26 @@ void runloop(MapView &view){
 					mousedown = false;
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					switch(event.button.button){
-						case 4:
-							if(++zoomdf >= 5){
-								zoomdf = 0;
-								view.zoom_at(event.button.x, event.button.y);
-								dirty = true;
-							}
-							break;
-						case 5:
-							if(--zoomdf <= -5){
-								zoomdf = 0;
-								view.zoom_out();
-								dirty = true;
-							}
-							break;
-						default:
-							mousedown = true;
-							if(SDL_GetTicks() - lastclick < 250){
-								lastclick = 0;
-								view.zoom_at(event.button.x, event.button.y);
-								dirty = true;
-							}
-							lastclick = SDL_GetTicks();
+					if(event.button.button == 1){
+						mousedown = true;
+						if(SDL_GetTicks() - lastclick < 250){
+							lastclick = 0;
+							view.zoom_at(event.button.x, event.button.y);
+							dirty = true;
+						}
+						lastclick = SDL_GetTicks();
+					}
+					break;
+				case SDL_MOUSEWHEEL:
+					zoomdf += event.wheel.y;
+					if(zoomdf >= 5){
+						zoomdf = 0;
+						view.zoom_in();
+						dirty = true;
+					}else if(zoomdf <= -5){
+						zoomdf = 0;
+						view.zoom_out();
+						dirty = true;
 					}
 					break;
 				case SDL_MOUSEMOTION:
