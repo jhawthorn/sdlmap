@@ -75,9 +75,14 @@ void runloop(MapView &view){
 					}
 					break;
 				case SDL_WINDOWEVENT:
-					if(event.window.event == SDL_WINDOWEVENT_RESIZED){
-						view.resize(event.window.data1, event.window.data2);
-						dirty = true;
+					switch(event.window.event){
+						case SDL_WINDOWEVENT_RESIZED:
+							view.resize(event.window.data1, event.window.data2);
+							dirty = true;
+							break;
+						case SDL_WINDOWEVENT_EXPOSED:
+							dirty = true;
+							break;
 					}
 					break;
 				case SDL_QUIT:
