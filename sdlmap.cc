@@ -18,7 +18,7 @@
 #include "map_view.h"
 
 static void resize(int width, int height){
-	if(!SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE | SDL_RESIZABLE)){
+	if(!SDL_SetVideoMode(width, height, 0, SDL_SWSURFACE)){
 		fprintf(stderr, "Unable to set video mode: %s\n", SDL_GetError());
 		exit(-1);
 	}
@@ -84,11 +84,11 @@ void runloop(MapView &view){
 							break;
 					}
 					break;
-				case SDL_VIDEORESIZE:
-					resize(event.resize.w, event.resize.h);
-					view.resize(event.resize.w, event.resize.h);
-					dirty = true;
-					break;
+				//case SDL_VIDEORESIZE:
+				//	resize(event.resize.w, event.resize.h);
+				//	view.resize(event.resize.w, event.resize.h);
+				//	dirty = true;
+				//	break;
 				case SDL_QUIT:
 					exit(0);
 			}
