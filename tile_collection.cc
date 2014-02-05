@@ -65,11 +65,11 @@ bool TileCollection::work(){
 	return working;
 }
 
-void TileCollection::render(int offsetx, int offsety){
+void TileCollection::render(SDL_Surface *screen, int offsetx, int offsety){
 	std::list<Tile *> l;
 	quad.queryRange(l, range);
 	for(std::list<Tile *>::iterator it = l.begin(); it != l.end(); ++it){
-		(*it)->render(offsetx, offsety);
+		(*it)->render(screen, offsetx, offsety);
 	}
 }
 

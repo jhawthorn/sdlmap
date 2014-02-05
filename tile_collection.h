@@ -30,7 +30,7 @@ class TileCollection{
 	TileDownloader transfers;
 	void set_bounds(int _minx, int _miny, int _maxx, int _maxy, int _zoom);
 	bool work();
-	void render(int offsetx, int offsety);
+	void render(SDL_Surface *screen, int offsetx, int offsety);
 };
 
 #endif

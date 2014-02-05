@@ -16,7 +16,7 @@ class Tile{
 		void queue();
 		void load(char *memory, int size);
 		std::string url();
-		void render(int offsetx, int offsety);
+		void render(SDL_Surface *screen, int offsetx, int offsety);
 
 };
 

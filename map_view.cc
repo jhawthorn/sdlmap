@@ -12,7 +12,8 @@ void MapView::center_coords(double lat, double lng){
 	offsety = y * (TILESIZE << zoom) - height / 2;
 }
 void MapView::render(){
-	tiles.render(offsetx, offsety);
+	SDL_Surface *screen = SDL_GetVideoSurface();
+	tiles.render(screen, offsetx, offsety);
 }
 void MapView::move_by(int dx, int dy){
 	offsetx += dx;
