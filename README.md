@@ -1,8 +1,12 @@
 # sdlmap
 
-A dead simple map tile viewer using SDL 2.0.
+sdlmap is a dead simple ["Slippy map"](http://wiki.openstreetmap.org/wiki/Slippy_Map) using SDL 2.0 and libcurl.
+It may be able to be run on systems which could not handle more complex browser and javascript based map viewers.
 
-Meant to be a starting point for map experiments, being minimalist (*read: incomplete*) and portable (*read: I used SDL*).
+sdlmap is meant to be a starting point for map experiments, being minimalist (*read: incomplete*) and portable (*read: I used SDL*).
+
+![preview](https://raw.github.com/jhawthorn/sdlmap/master/preview.png)
+(Map tiles courtesy of [OpenStreetMap](http://www.openstreetmap.org))
 
 ## Usage
 
@@ -26,7 +30,7 @@ $ ./sdlmap
 ### Ubuntu
 
 ```
-sudo apt-get install libsdl2-image-2.0-0 libcurl4-gnutls-dev
+# apt-get install libsdl2-image-dev libcurl4-gnutls-dev
 ```
 
 
