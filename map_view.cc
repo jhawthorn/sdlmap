@@ -38,7 +38,10 @@ void MapView::zoom_out(){
 	}
 }
 void MapView::resize(int w, int h){
-	//printf("resize(%i, %i)\n", width, height);
+	/* keep the same center*/
+	offsetx += (width - w) / 2;
+	offsety += (height - h) / 2;
+
 	width = w;
 	height = h;
 }
